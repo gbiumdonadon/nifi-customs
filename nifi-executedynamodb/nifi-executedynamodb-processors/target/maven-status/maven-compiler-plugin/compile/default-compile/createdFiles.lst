@@ -1,0 +1,3 @@
+br\com\tksolution\processors\executedynamodb\ExecuteDynamoDB.class
+br\com\tksolution\processors\executedynamodb\ExecuteDynamoDBDocumentClient.class
+br\com\tksolution\processors\executedynamodb\ExecuteDynamoDB$1.class
