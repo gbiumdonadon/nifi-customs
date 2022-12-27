@@ -51,7 +51,7 @@ public class ExecuteDynamoDBTest {
     public void testGETItemExistente() throws UnsupportedEncodingException, InitializationException {
     	
     	testRunner.setProperty(ExecuteDynamoDB.HASH_KEY, "cpf");
-    	testRunner.setProperty(ExecuteDynamoDB.HASH_VALUE, "41259144860");
+    	testRunner.setProperty(ExecuteDynamoDB.HASH_VALUE, "");
     	 //testRunner.setProperty(ExecuteDynamoDB.RANGE_KEY, "ProcessGroup");
 		 testRunner.setProperty(ExecuteDynamoDB.UPDATE_ITEM_JSON, "{ \"name\": \"GUSTAVO BIUM DONADON\", \"gestorNome\": \"ROGERIO LUCIO DA SILVA\" }");
     	 //testRunner.setProperty(ExecuteDynamoDB.RANGE_VALUE, "cadastroPropriedades_cadastroProdutos");
