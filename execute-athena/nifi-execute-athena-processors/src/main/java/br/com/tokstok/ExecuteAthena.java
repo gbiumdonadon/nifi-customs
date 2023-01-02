@@ -45,6 +45,7 @@ import software.amazon.awssdk.services.athena.model.GetQueryExecutionRequest;
 import software.amazon.awssdk.services.athena.model.GetQueryExecutionResponse;
 import software.amazon.awssdk.services.athena.model.GetQueryResultsRequest;
 import software.amazon.awssdk.services.athena.model.GetQueryResultsResponse;
+import software.amazon.awssdk.services.athena.model.InvalidRequestException;
 import software.amazon.awssdk.services.athena.model.QueryExecutionContext;
 import software.amazon.awssdk.services.athena.model.QueryExecutionState;
 import software.amazon.awssdk.services.athena.model.ResultConfiguration;
@@ -169,7 +170,12 @@ public class ExecuteAthena extends AbstractProcessor {
             AthenaClient athenaClient = AthenaClient.builder()
             .build();
 
-            String queryExecutionId = submitAthenaQuery(athenaClient, context.getProperty(ATHENA_DATABASE).getValue(), context.getProperty(OUTPUT_LOCATION).getValue(), context.getProperty(ATHENA_QUERY).getValue());
+            String queryExecutionId = submitAthenaQuery(
+                athenaClient, 
+                context.getProperty(ATHENA_DATABASE).evaluateAttributeExpressions(flowFile).getValue(), 
+                context.getProperty(OUTPUT_LOCATION).evaluateAttributeExpressions(flowFile).getValue(), 
+                context.getProperty(ATHENA_QUERY).evaluateAttributeExpressions(flowFile).getValue()
+            );
             waitForQueryToComplete(athenaClient, queryExecutionId);
             String flowfileContent = processResultRows(athenaClient, queryExecutionId, context.getProperty(NEXT_TOKEN).getValue());
             flowFile = session.write(flowFile, new StreamCallback() {
@@ -185,37 +191,29 @@ public class ExecuteAthena extends AbstractProcessor {
         } catch (Exception e) {
             session.putAttribute(flowFile, "Execute Athena Exception", e.getMessage());
             session.transfer(flowFile, FAILURE);
-            // System.out.println(e.getMessage());
         }      
 
     }
 
     public static String submitAthenaQuery(AthenaClient athenaClient, String database, String outputLocation, String athenaQuery) {
-        try {
-            // QueryExecutionContext para especificar em qual database estaremos trabalhando.
-            QueryExecutionContext queryExecutionContext = QueryExecutionContext.builder()
-                .database(database)
-                .build();
+        // QueryExecutionContext para especificar em qual database estaremos trabalhando.
+        QueryExecutionContext queryExecutionContext = QueryExecutionContext.builder()
+            .database(database)
+            .build();
 
-            // ResultConfiguration para especificar em qual bucket o resultado da query irá.
-            ResultConfiguration resultConfiguration = ResultConfiguration.builder()
-                .outputLocation(outputLocation)
-                .build();
+        // ResultConfiguration para especificar em qual bucket o resultado da query irá.
+        ResultConfiguration resultConfiguration = ResultConfiguration.builder()
+            .outputLocation(outputLocation)
+            .build();
 
-            StartQueryExecutionRequest startQueryExecutionRequest = StartQueryExecutionRequest.builder()
-                .queryString(athenaQuery)
-                .queryExecutionContext(queryExecutionContext)
-                .resultConfiguration(resultConfiguration)
-                .build();
+        StartQueryExecutionRequest startQueryExecutionRequest = StartQueryExecutionRequest.builder()
+            .queryString(athenaQuery)
+            .queryExecutionContext(queryExecutionContext)
+            .resultConfiguration(resultConfiguration)
+            .build();
 
-            StartQueryExecutionResponse startQueryExecutionResponse = athenaClient.startQueryExecution(startQueryExecutionRequest);
-            return startQueryExecutionResponse.queryExecutionId();
-
-        } catch (AthenaException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
-        return "";
+        StartQueryExecutionResponse startQueryExecutionResponse = athenaClient.startQueryExecution(startQueryExecutionRequest);
+        return startQueryExecutionResponse.queryExecutionId();
     }
 
     public static void waitForQueryToComplete(AthenaClient athenaClient, String queryExecutionId) throws InterruptedException {
@@ -243,30 +241,22 @@ public class ExecuteAthena extends AbstractProcessor {
     }
 
     public static String processResultRows(AthenaClient athenaClient, String queryExecutionId, String nextToken) {
-        try {
+        JSONObject result = new JSONObject();
+        GetQueryResultsRequest getQueryResultsRequest = GetQueryResultsRequest.builder()
+            .queryExecutionId(queryExecutionId)
+            .maxResults(1000)
+            .nextToken(nextToken)
+            .build();
 
-            JSONObject result = new JSONObject();
-            GetQueryResultsRequest getQueryResultsRequest = GetQueryResultsRequest.builder()
-                .queryExecutionId(queryExecutionId)
-                .maxResults(1000)
-                .nextToken(nextToken)
-                .build();
+        GetQueryResultsResponse getQueryResultsResponse = athenaClient.getQueryResults(getQueryResultsRequest);
+        String paginationNextToken = getQueryResultsResponse.nextToken();   
 
-            GetQueryResultsResponse getQueryResultsResponse = athenaClient.getQueryResults(getQueryResultsRequest);
-            String paginationNextToken = getQueryResultsResponse.nextToken();   
-
-            List<ColumnInfo> columnInfoList = getQueryResultsResponse.resultSet().resultSetMetadata().columnInfo();
-            List<Row> results = getQueryResultsResponse.resultSet().rows();
-            ArrayList<JSONObject> rows = processRow(results, columnInfoList);
-            result.put("rows", rows);
-            result.put("nextToken", paginationNextToken);
-            return result.toString();
-
-        } catch (AthenaException e) {
-           e.printStackTrace();
-           System.exit(1);
-       }
-        return "";
+        List<ColumnInfo> columnInfoList = getQueryResultsResponse.resultSet().resultSetMetadata().columnInfo();
+        List<Row> results = getQueryResultsResponse.resultSet().rows();
+        ArrayList<JSONObject> rows = processRow(results, columnInfoList);
+        result.put("rows", rows);
+        result.put("nextToken", paginationNextToken);
+        return result.toString();
     }
 
     private static ArrayList<JSONObject> processRow(List<Row> row, List<ColumnInfo> columnInfoList) {
@@ -276,9 +266,14 @@ public class ExecuteAthena extends AbstractProcessor {
             List<Datum> allData = myRow.data();
             JSONObject result = new JSONObject();
             for (Datum data : allData) {
-                result.put(columnInfoList.get(allData.indexOf(data)).name(), data.varCharValue());
+                // Para previnir de adicionar o header a resposta
+                if (!columnInfoList.get(allData.indexOf(data)).name().equalsIgnoreCase(data.varCharValue())) {
+                    result.put(columnInfoList.get(allData.indexOf(data)).name(), data.varCharValue());
+                }
             }
-            resultJArray.add(result);
+            
+            // Para previnir de adicionar o header a resposta
+            if (result.length() > 0) resultJArray.add(result);
         }
 
         return resultJArray;

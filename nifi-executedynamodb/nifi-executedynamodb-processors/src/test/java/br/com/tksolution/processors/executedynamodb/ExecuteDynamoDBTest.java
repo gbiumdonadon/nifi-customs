@@ -53,17 +53,17 @@ public class ExecuteDynamoDBTest {
     	testRunner.setProperty(ExecuteDynamoDB.HASH_KEY, "cpf");
     	testRunner.setProperty(ExecuteDynamoDB.HASH_VALUE, "");
     	 //testRunner.setProperty(ExecuteDynamoDB.RANGE_KEY, "ProcessGroup");
-		 testRunner.setProperty(ExecuteDynamoDB.UPDATE_ITEM_JSON, "{ \"name\": \"GUSTAVO BIUM DONADON\", \"gestorNome\": \"ROGERIO LUCIO DA SILVA\" }");
+		 testRunner.setProperty(ExecuteDynamoDB.UPDATE_ITEM_JSON, "{ \"name\": \"\", \"gestorNome\": \"\" }");
     	 //testRunner.setProperty(ExecuteDynamoDB.RANGE_VALUE, "cadastroPropriedades_cadastroProdutos");
 
     	 //testRunner.setProperty(ExecuteDynamoDB.FILTER_EXPRESSION, "#field = :value");
-    	//testRunner.setProperty(ExecuteDynamoDB.FILTER_ATTRIBUTES, "{ \":value\": \"cadastroPropriedades_ad1e3c53-135b-4f19-abcd-8bd715d8bdbe\" }");
+    	//testRunner.setProperty(ExecuteDynamoDB.FILTER_ATTRIBUTES, "{ \":value\": \"\" }");
     	 //testRunner.setProperty(ExecuteDynamoDB.FILTER_NAMES, "{ \"#field\": \"LastEvaluatedKey\" }");
 
     	testRunner.setProperty(ExecuteDynamoDB.TABLE_NAME, "colaboradores");
     	testRunner.setProperty(ExecuteDynamoDB.FUNCTION, ExecuteDynamoDB.PUT_ITEM);
     	// testRunner.setProperty(ExecuteDynamoDB.TABLE_INDEX_NAME, "table");
-    	//testRunner.setProperty(ExecuteDynamoDB.LAST_EVALUATED_KEY, "{ \"rangeKeyValue\": \"cadastroPropriedades_cadastroProdutos\", \"hashKeyValue\": \"cadastroPropriedades_bfe7b522-5abd-4c7d-95bf-2160bb4e2988\" }");
+    	//testRunner.setProperty(ExecuteDynamoDB.LAST_EVALUATED_KEY, "{ \"rangeKeyValue\": \"cadastroPropriedades_cadastroProdutos\", \"hashKeyValue\": \"\" }");
     	// testRunner.setProperty(ExecuteDynamoDB.LAST_EVALUATED_KEY, "null");
     	testRunner.setProperty(ExecuteDynamoDB.AWS_CREDENTIALS, "awsCredentialsProvider");
     	testRunner.setProperty(ExecuteDynamoDB.REGION, "us-east-1");
