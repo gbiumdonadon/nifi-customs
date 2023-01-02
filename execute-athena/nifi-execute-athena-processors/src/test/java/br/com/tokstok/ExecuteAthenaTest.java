@@ -33,19 +33,13 @@ public class ExecuteAthenaTest {
     @Before
     public void init() throws InitializationException {
         testRunner = TestRunners.newTestRunner(ExecuteAthena.class);
-
-       	final AWSCredentialsProviderControllerService serviceImpl = new AWSCredentialsProviderControllerService();
-      
-    	testRunner.addControllerService("awsCredentialsProvider", serviceImpl);
-    	testRunner.enableControllerService(serviceImpl);
     }
 
-    @Test @Ignore
+    @Test
     public void testProcessor() {
-
         testRunner.setProperty(ExecuteAthena.ATHENA_DATABASE, "dumper_database");
         testRunner.setProperty(ExecuteAthena.ATHENA_TABLE, "dumper_table");
-        testRunner.setProperty(ExecuteAthena.ATHENA_QUERY, "SELECT * FROM dumper_table limit 10");
+        testRunner.setProperty(ExecuteAthena.ATHENA_QUERY, "SELECT * FROM dumper_table WHERE process = 'Order-create-OMS-to-GC' limit 10;");
         testRunner.setProperty(ExecuteAthena.OUTPUT_LOCATION, "s3://tks-processtracker-dumper-output");
         // testRunner.setProperty(ExecuteAthena.NEXT_TOKEN, "");
 

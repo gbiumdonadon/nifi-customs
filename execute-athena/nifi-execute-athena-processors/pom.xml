@@ -19,7 +19,7 @@
     <parent>
         <groupId>br.com.tokstok</groupId>
         <artifactId>execute-athena</artifactId>
-        <version>1.0</version>
+        <version>1.0</version>  
     </parent>
 
     <artifactId>nifi-execute-athena-processors</artifactId>
