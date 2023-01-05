@@ -35,17 +35,14 @@ import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
-import org.apache.nifi.processors.aws.AbstractAWSCredentialsProviderProcessor;
 import org.json.JSONObject;
 import software.amazon.awssdk.services.athena.AthenaClient;
-import software.amazon.awssdk.services.athena.model.AthenaException;
 import software.amazon.awssdk.services.athena.model.ColumnInfo;
 import software.amazon.awssdk.services.athena.model.Datum;
 import software.amazon.awssdk.services.athena.model.GetQueryExecutionRequest;
 import software.amazon.awssdk.services.athena.model.GetQueryExecutionResponse;
 import software.amazon.awssdk.services.athena.model.GetQueryResultsRequest;
 import software.amazon.awssdk.services.athena.model.GetQueryResultsResponse;
-import software.amazon.awssdk.services.athena.model.InvalidRequestException;
 import software.amazon.awssdk.services.athena.model.QueryExecutionContext;
 import software.amazon.awssdk.services.athena.model.QueryExecutionState;
 import software.amazon.awssdk.services.athena.model.ResultConfiguration;
@@ -59,7 +56,9 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 
 @Tags({"Athena", "AWS", "Tokstok"})
@@ -189,6 +188,7 @@ public class ExecuteAthena extends AbstractProcessor {
             session.transfer(flowFile, SUCCESS);
             
         } catch (Exception e) {
+            // System.out.println("Execute Athena Exception " + e.getMessage());
             session.putAttribute(flowFile, "Execute Athena Exception", e.getMessage());
             session.transfer(flowFile, FAILURE);
         }      
@@ -233,10 +233,7 @@ public class ExecuteAthena extends AbstractProcessor {
                 throw new RuntimeException("The Amazon Athena query was cancelled.");
             } else if (queryState.equals(QueryExecutionState.SUCCEEDED.toString())) {
                 isQueryStillRunning = false;
-            } else {
-                // Tempo para aguardar antes de fazer uma nova tentativa.
-                Thread.sleep(1000);
-            }
+            } 
         }
     }
 
@@ -250,29 +247,34 @@ public class ExecuteAthena extends AbstractProcessor {
 
         GetQueryResultsResponse getQueryResultsResponse = athenaClient.getQueryResults(getQueryResultsRequest);
         String paginationNextToken = getQueryResultsResponse.nextToken();   
-
         List<ColumnInfo> columnInfoList = getQueryResultsResponse.resultSet().resultSetMetadata().columnInfo();
-        List<Row> results = getQueryResultsResponse.resultSet().rows();
+        ListIterator<Row> results = getQueryResultsResponse.resultSet().rows().listIterator();
+
         ArrayList<JSONObject> rows = processRow(results, columnInfoList);
         result.put("rows", rows);
         result.put("nextToken", paginationNextToken);
+        
         return result.toString();
     }
 
-    private static ArrayList<JSONObject> processRow(List<Row> row, List<ColumnInfo> columnInfoList) {
+    private static ArrayList<JSONObject> processRow(ListIterator<Row> results, List<ColumnInfo> columnInfoList) {
         ArrayList<JSONObject> resultJArray = new ArrayList<JSONObject>();
 
-        for (Row myRow : row) {
-            List<Datum> allData = myRow.data();
+        while (results.hasNext()) {
+            List<Datum> row = results.next().data();
+            Iterator<Datum> rowValues = row.iterator();
+            Iterator<ColumnInfo> columns = columnInfoList.iterator();
             JSONObject result = new JSONObject();
-            for (Datum data : allData) {
+
+            while (columns.hasNext()) {
+                String column = columns.next().name();
+                String rowValue = rowValues.next().varCharValue();
+                
                 // Para previnir de adicionar o header a resposta
-                if (!columnInfoList.get(allData.indexOf(data)).name().equalsIgnoreCase(data.varCharValue())) {
-                    result.put(columnInfoList.get(allData.indexOf(data)).name(), data.varCharValue());
-                }
+                if (!column.equalsIgnoreCase(rowValue)) result.put(column, rowValue);
             }
-            
-            // Para previnir de adicionar o header a resposta
+
+            // Para previnir de adicionar requisições sem resultados ao array
             if (result.length() > 0) resultJArray.add(result);
         }
 
