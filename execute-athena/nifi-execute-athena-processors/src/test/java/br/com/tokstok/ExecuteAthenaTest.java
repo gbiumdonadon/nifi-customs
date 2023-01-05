@@ -21,8 +21,6 @@ import org.apache.nifi.util.TestRunners;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService;
 import org.apache.nifi.reporting.InitializationException;
 
 
@@ -39,7 +37,7 @@ public class ExecuteAthenaTest {
     public void testProcessor() {
         testRunner.setProperty(ExecuteAthena.ATHENA_DATABASE, "dumper_database");
         testRunner.setProperty(ExecuteAthena.ATHENA_TABLE, "dumper_table");
-        testRunner.setProperty(ExecuteAthena.ATHENA_QUERY, "SELECT * FROM dumper_table WHERE process = 'Order-create-OMS-to-GC' limit 10;");
+        testRunner.setProperty(ExecuteAthena.ATHENA_QUERY, "SELECT * FROM dumper_table WHERE process = 'Exception' limit 10;");
         testRunner.setProperty(ExecuteAthena.OUTPUT_LOCATION, "s3://tks-processtracker-dumper-output");
         // testRunner.setProperty(ExecuteAthena.NEXT_TOKEN, "");
 
